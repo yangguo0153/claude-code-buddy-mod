@@ -76,6 +76,33 @@ Claude Code 更新时会安装新二进制，修改会失效。脚本会：
 
 检测逻辑：将当前版本号存储在 `~/.claude/.buddy-mod-applied`，每次运行对比。
 
+### 自动检测 Hook
+
+安装后每次打开终端自动检测版本变化：
+
+```bash
+./install-hook.sh
+source ~/.zshrc  # 或重启终端
+```
+
+效果：
+- 版本更新后打开终端会提示
+- 或使用 `claude-mod-check` 别名（检测 + 启动）
+
+### 官方功能更新
+
+**你的宠物会自动享受官方新功能！**
+
+Buddy 系统设计：
+- **Bones (动态计算)**: species, eye, hat, stats — 使用官方最新数组
+- **Soul (存储配置)**: name, personality, hatchedAt — 保留你的宠物
+
+所以：
+- ✅ 官方新增 **species/hats** → 你自动获得新外观
+- ✅ 官方改进 **stats 计算逻辑** → 自动应用
+- ✅ 官方新增 **动画/交互** → 自动享受
+- ❌ 版本更新后 **权重/floor 修改失效** → 运行脚本重新修改
+
 ## 解决的问题
 
 ### 1. 简介不匹配
