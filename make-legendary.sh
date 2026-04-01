@@ -119,17 +119,22 @@ if ! $QUIET; then echo "开始修改..."; fi
 # 移除签名
 codesign --remove-signature "$CLAUDE_BIN" 2>/dev/null || true
 
-# 1. 修改权重
+# 1. 修改权重 - legendary 99%
 echo "  → 修改品质权重..."
 WEIGHT_STR='common:00,uncommon:00,rare:00,epic:0,legendary:9'
 for offset in $(grep -a -b -o "common:60,uncommon:25,rare:10,epic:4,legendary:1" "$CLAUDE_BIN" | cut -d: -f1); do
     printf '%s' "$WEIGHT_STR" | dd of="$CLAUDE_BIN" bs=1 seek=$offset conv=notrunc 2>/dev/null
 done
 
-# 2. 修改随机种子（可选，保留用户宠物）
+# 2. 修改闪光概率 - 99%
 if ! $QUIET; then
-    echo "  → 保留随机种子（保持现有宠物）"
+    echo "  → 闪光概率 99%"
 fi
+for offset in $(grep -a -b -o "shiny:H()<0.01" "$CLAUDE_BIN" | cut -d: -f1); do
+    printf '%s' "shiny:H()<0.99" | dd of="$CLAUDE_BIN" bs=1 seek=$offset conv=notrunc 2>/dev/null
+done
+
+# 3. 保留或更新种子
 
 # 清除属性并签名
 xattr -c "$CLAUDE_BIN" 2>/dev/null || true

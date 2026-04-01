@@ -1,15 +1,13 @@
 # Claude Code Buddy 传奇品质 Mod
 
-让宠物直接成为传奇品质。
+让宠物直接成为传奇品质 + 闪光。
 
 ## 修改效果
 
 | 项目 | 原版 | 修改后 |
 |-----|------|-------|
 | 品质权重 | legendary 1% | legendary 99% |
-| 属性基础值 | legendary=50 | legendary=50（不变） |
-
-注：不修改 RARITY_FLOOR，避免 stats > 100 导致的渲染错误。
+| 闪光概率 | 1% | 99% |
 
 ## 安装
 
@@ -26,37 +24,38 @@ source ~/.zshrc
 ## 使用
 
 ```bash
-# 推荐：使用 claude-auto
-claude-auto
+# 推荐：一键重新孵化（Legendary + Shiny）
+./rehatch.sh
 
 # 或手动修改
 ./make-legendary.sh
 ```
 
-## 长期陪伴原理
+## 永久性说明
 
 ```
 ┌─────────────────────────────────────────────┐
-│  Bones (每次动态计算，使用官方最新配置)      │
-│  ├─ species, eye, hat                       │
-│  │   → 官方新增 dragon/owl/capybara         │
-│  │   → 你自动获得新外观 ✓                   │
-│  └─ stats (floor=50)                        │
-│      → DEBUGGING: 50-100                    │
-│      → PATIENCE: 50-100                     │
-│      → WISDOM: 50-100                       │
+│  Bones (由种子决定，永久固定)               │
+│  ├─ Species, Eye, Hat                       │
+│  ├─ Shiny (闪光)                            │
+│  ├─ Rarity (品质)                           │
+│  └─ Stats (属性)                            │
 │                                             │
-│  Soul (存储在 ~/.claude.json，永久保留)     │
-│  ├─ name: "Pickle"                          │
-│  └─ personality: "A legendary owl..."       │
+│  Soul (存储在 ~/.claude.json)              │
+│  ├─ Name                                    │
+│  └─ Personality                             │
 └─────────────────────────────────────────────┘
 ```
+
+**种子不变 = 宠物属性永久固定**
+
+官方版本更新后，只需重新运行 `./rehatch.sh` 或 `./make-legendary.sh`。
 
 ## 版本更新处理
 
 - 使用 `claude-auto` 自动检测版本变化
-- 版本更新后首次运行自动修改权重
-- 宠物配置（name/personality）永久保留
+- 版本更新后首次运行自动修改权重+闪光
+- 种子保持不变，宠物属性不变
 
 ## 注意事项
 
