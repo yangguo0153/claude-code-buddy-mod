@@ -27,9 +27,9 @@ if [[ ! -f "$BACKUP" ]]; then
     cp "$CLAUDE_BIN" "$BACKUP"
 fi
 
-# 生成随机种子
-RAND_NUM=$(jot -r 1 1 999 2>/dev/null || shuf -i 1-999 -n 1)
-NEW_SALT=$(printf "friend-2026-%03d" $RAND_NUM)
+# 生成随机种子 (1-9999，更大范围避免重复)
+RAND_NUM=$(jot -r 1 1 9999 2>/dev/null || shuf -i 1-9999 -n 1)
+NEW_SALT=$(printf "friend-2026-%04d" $RAND_NUM)
 
 echo "新种子: $NEW_SALT"
 
@@ -60,9 +60,15 @@ done
 xattr -c "$CLAUDE_BIN" 2>/dev/null || true
 codesign -s - "$CLAUDE_BIN" 2>/dev/null
 
-# 删除宠物配置
+# 删除宠物配置（确保只有一条最终记录，不留孵化历史）
+# 注意：配置文件不会保留孵化历史，每次只存一条当前记录
 if command -v jq &> /dev/null; then
+    # 删除旧宠物配置
     jq 'del(.companion)' "$CONFIG_FILE" > "$CONFIG_FILE.tmp" && mv "$CONFIG_FILE.tmp" "$CONFIG_FILE"
+    # 删除可能的孵化计数器
+    jq 'del(.birthdayHatAnimationCount)' "$CONFIG_FILE" > "$CONFIG_FILE.tmp" && mv "$CONFIG_FILE.tmp" "$CONFIG_FILE"
+    # 清理修改标记文件
+    rm -f ~/.claude/.buddy-mod-applied 2>/dev/null
 else
     sed -i.bak '/"companion":/,/}/d' "$CONFIG_FILE"
 fi

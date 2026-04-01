@@ -147,11 +147,13 @@ if ! $QUIET; then
         read -p "删除现有宠物配置重新孵化? [y/N]: " del_config
         if [[ "$del_config" == "y" ]]; then
             if command -v jq &> /dev/null; then
-                jq 'del(.companion)' "$CONFIG_FILE" > "$CONFIG_FILE.tmp" && mv "$CONFIG_FILE.tmp" "$CONFIG_FILE"
+                jq 'del(.companion) | del(.birthdayHatAnimationCount)' "$CONFIG_FILE" > "$CONFIG_FILE.tmp" && mv "$CONFIG_FILE.tmp" "$CONFIG_FILE"
             else
                 cp "$CONFIG_FILE" "$CONFIG_FILE.bak"
                 sed -i '' '/"companion":/,/}/d' "$CONFIG_FILE"
             fi
+            # 清理修改标记文件
+            rm -f ~/.claude/.buddy-mod-applied 2>/dev/null
             echo -e "${GREEN}✓ 已删除旧配置${NC}"
         fi
     fi
