@@ -69,9 +69,9 @@ if [[ -f "$MOD_MARKER" ]] && [[ "$(cat "$MOD_MARKER")" == "$CURRENT_VER" ]]; the
         echo "从备份恢复..."
         cp "$BACKUP" "$CLAUDE_BIN"
 
-        # 生成随机种子 (1-9999, 4位数格式)
-        RAND_NUM=$(jot -r 1 1 9999 2>/dev/null || shuf -i 1-9999 -n 1)
-        NEW_SALT=$(printf "friend-2026-%04d" $RAND_NUM)
+        # 生成随机种子 (1-999, 固定15字符长度)
+        RAND_NUM=$(jot -r 1 1 999 2>/dev/null || shuf -i 1-999 -n 1)
+        NEW_SALT=$(printf "friend-2026-%03d" $RAND_NUM)
         echo "使用新种子: $NEW_SALT"
 
         codesign --remove-signature "$CLAUDE_BIN" 2>/dev/null || true

@@ -62,9 +62,9 @@ fi
 echo "从备份恢复..."
 cp "$BACKUP" "$CLAUDE_BIN"
 
-# 生成随机种子 (1-9999)
-RAND_NUM=$(jot -r 1 1 9999 2>/dev/null || shuf -i 1-9999 -n 1)
-NEW_SALT=$(printf "friend-2026-%04d" $RAND_NUM)
+# 生成随机种子 (1-999, 固定15字符长度)
+RAND_NUM=$(jot -r 1 1 999 2>/dev/null || shuf -i 1-999 -n 1)
+NEW_SALT=$(printf "friend-2026-%03d" $RAND_NUM)
 
 echo "新种子: $NEW_SALT"
 
