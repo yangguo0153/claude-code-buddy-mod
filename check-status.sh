@@ -49,13 +49,6 @@ if [[ -f "$CLAUDE_BIN" ]]; then
         echo -e "  权重: ${YELLOW}原版权重${NC}"
     fi
 
-    # 属性基础值
-    if grep -q "legendary:90" "$CLAUDE_BIN" 2>/dev/null; then
-        echo -e "  属性基础值: ${GREEN}legendary:90 ✓${NC}"
-    else
-        echo -e "  属性基础值: ${YELLOW}legendary:50 (原版)${NC}"
-    fi
-
     # 种子
     SALT=$(grep -o "friend-2026-[0-9]*" "$CLAUDE_BIN" 2>/dev/null | head -1)
     echo "  随机种子: $SALT"
@@ -101,7 +94,7 @@ echo ""
 echo -e "${CYAN}─────────────────────────────────────${NC}"
 
 # 提示
-if grep -q "legendary:9" "$CLAUDE_BIN" 2>/dev/null && grep -q "legendary:90" "$CLAUDE_BIN" 2>/dev/null; then
+if grep -q "legendary:9" "$CLAUDE_BIN" 2>/dev/null; then
     if [[ -f "$MOD_MARKER" ]] && [[ "$(cat "$MOD_MARKER")" == "$CURRENT_VER" ]]; then
         echo -e "${GREEN}状态正常，修改生效${NC}"
     else

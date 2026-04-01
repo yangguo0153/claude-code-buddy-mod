@@ -98,12 +98,11 @@ if [[ -f "$MOD_MARKER" ]]; then
     fi
 fi
 
-# 静默模式：直接修改，不需要确认
+# 静默模式：不需要确认
 if ! $QUIET; then
     echo ""
     echo -e "${CYAN}修改内容:${NC}"
-    echo "  1) 品质权重: legendary 99%"
-    echo "  2) 属性基础值: 所有属性大幅提升 (floor=90)"
+    echo "  • 品质权重: legendary 99%"
     echo ""
     read -p "继续修改? [Y/n]: " confirm
     if [[ "$confirm" == "n" ]]; then exit 0; fi
@@ -120,19 +119,17 @@ if ! $QUIET; then echo "开始修改..."; fi
 # 移除签名
 codesign --remove-signature "$CLAUDE_BIN" 2>/dev/null || true
 
-# 修改权重
+# 1. 修改权重
+echo "  → 修改品质权重..."
 WEIGHT_STR='common:00,uncommon:00,rare:00,epic:0,legendary:9'
 for offset in $(grep -a -b -o "common:60,uncommon:25,rare:10,epic:4,legendary:1" "$CLAUDE_BIN" | cut -d: -f1); do
     printf '%s' "$WEIGHT_STR" | dd of="$CLAUDE_BIN" bs=1 seek=$offset conv=notrunc 2>/dev/null
 done
 
-# 修改属性基础值
-for offset in $(grep -a -b -o "legendary:50" "$CLAUDE_BIN" | cut -d: -f1); do
-    printf '%s' "legendary:90" | dd of="$CLAUDE_BIN" bs=1 seek=$offset conv=notrunc 2>/dev/null
-done
-
-# 保持当前种子（不修改）
-# 这样用户的宠物保持不变，只是品质和属性基础值更新
+# 2. 修改随机种子（可选，保留用户宠物）
+if ! $QUIET; then
+    echo "  → 保留随机种子（保持现有宠物）"
+fi
 
 # 清除属性并签名
 xattr -c "$CLAUDE_BIN" 2>/dev/null || true
@@ -169,8 +166,8 @@ if "$CLAUDE_BIN" --version 2>&1 | grep -q "$CURRENT_VER"; then
         echo -e "${GREEN}════════════════════════════════════════${NC}"
         echo ""
         echo -e "${YELLOW}修改效果:${NC}"
-        echo "  • 品质: ★★★★★ 传奇"
-        echo "  • 属性基础值: 90 (原 50)"
+        echo "  • 品质: ★★★★★ 传奇 (99%)"
+        echo "  • 属性基础值: 50 (legendary 默认值)"
         echo ""
         echo "使用 claude-auto 自动享受版本更新"
     fi
