@@ -24,7 +24,7 @@ MOD_MARKER="$HOME/.claude/.buddy-mod-applied"
 
 if ! $QUIET; then
     echo -e "${PURPLE}════════════════════════════════════════${NC}"
-    echo -e "${PURPLE}  Claude Code Buddy 深度优化 v3.0     ${NC}"
+    echo -e "${PURPLE}  Claude Code Buddy 深度优化 v3.1     ${NC}"
     echo -e "${PURPLE}════════════════════════════════════════${NC}"
     echo ""
 fi
@@ -59,27 +59,79 @@ if [[ -f "$MOD_MARKER" ]] && [[ "$(cat "$MOD_MARKER")" == "$CURRENT_VER" ]]; the
     read -p "选择 [1/2/3]: " action
 
     if [[ "$action" == "1" ]]; then
-        CURRENT_SALT=$(grep -o "friend-2026-[0-9]*" "$CLAUDE_BIN" 2>/dev/null | head -1)
-        SALT_NUM=$(echo "$CURRENT_SALT" | grep -o '[0-9]*$')
-        NEW_NUM=$((SALT_NUM + 1))
-        NEW_SALT="friend-2026-${NEW_NUM}"
+        # 检查备份是否存在
+        if [[ ! -f "$BACKUP" ]]; then
+            echo -e "${RED}错误: 备份文件不存在${NC}"
+            exit 1
+        fi
 
+        # 从备份恢复（确保干净起点）
+        echo "从备份恢复..."
+        cp "$BACKUP" "$CLAUDE_BIN"
+
+        # 生成随机种子 (1-9999, 4位数格式)
+        RAND_NUM=$(jot -r 1 1 9999 2>/dev/null || shuf -i 1-9999 -n 1)
+        NEW_SALT=$(printf "friend-2026-%04d" $RAND_NUM)
         echo "使用新种子: $NEW_SALT"
+
         codesign --remove-signature "$CLAUDE_BIN" 2>/dev/null || true
 
+        # 修改权重
+        WEIGHT_STR='common:00,uncommon:00,rare:00,epic:0,legendary:9'
+        WEIGHT_COUNT=0
+        for offset in $(grep -a -b -o "common:60,uncommon:25,rare:10,epic:4,legendary:1" "$CLAUDE_BIN" | cut -d: -f1); do
+            printf '%s' "$WEIGHT_STR" | dd of="$CLAUDE_BIN" bs=1 seek=$offset conv=notrunc 2>/dev/null
+            WEIGHT_COUNT=$((WEIGHT_COUNT + 1))
+        done
+
+        if [[ $WEIGHT_COUNT -eq 0 ]]; then
+            echo -e "${RED}错误: 未找到权重定义${NC}"
+            cp "$BACKUP" "$CLAUDE_BIN"
+            codesign -s - "$CLAUDE_BIN" 2>/dev/null
+            exit 1
+        fi
+
+        # 修改闪光概率
+        SHINY_COUNT=0
+        for offset in $(grep -a -b -o "shiny:H()<0.01" "$CLAUDE_BIN" | cut -d: -f1); do
+            printf '%s' "shiny:H()<0.99" | dd of="$CLAUDE_BIN" bs=1 seek=$offset conv=notrunc 2>/dev/null
+            SHINY_COUNT=$((SHINY_COUNT + 1))
+        done
+
+        # 修改种子
+        SEED_COUNT=0
         for offset in $(grep -a -b -o "friend-2026-[0-9]*" "$CLAUDE_BIN" | cut -d: -f1); do
             printf '%s' "$NEW_SALT" | dd of="$CLAUDE_BIN" bs=1 seek=$offset conv=notrunc 2>/dev/null
+            SEED_COUNT=$((SEED_COUNT + 1))
         done
 
         xattr -c "$CLAUDE_BIN" 2>/dev/null || true
         codesign -s - "$CLAUDE_BIN" 2>/dev/null
 
+        # 验证二进制是否有效
+        if ! "$CLAUDE_BIN" --version 2>&1 | grep -q "$CURRENT_VER"; then
+            echo -e "${RED}错误: 修改后二进制无效，恢复备份...${NC}"
+            cp "$BACKUP" "$CLAUDE_BIN"
+            codesign -s - "$CLAUDE_BIN" 2>/dev/null
+            exit 1
+        fi
+
+        # 验证修改是否成功
+        if ! grep -q "legendary:9" "$CLAUDE_BIN" 2>/dev/null; then
+            echo -e "${RED}错误: 权重修改失败${NC}"
+            cp "$BACKUP" "$CLAUDE_BIN"
+            codesign -s - "$CLAUDE_BIN" 2>/dev/null
+            exit 1
+        fi
+
+        # 删除宠物配置
         if command -v jq &> /dev/null; then
-            jq 'del(.companion)' "$CONFIG_FILE" > "$CONFIG_FILE.tmp" && mv "$CONFIG_FILE.tmp" "$CONFIG_FILE"
+            jq 'del(.companion) | del(.birthdayHatAnimationCount)' "$CONFIG_FILE" > "$CONFIG_FILE.tmp" && mv "$CONFIG_FILE.tmp" "$CONFIG_FILE"
         else
             cp "$CONFIG_FILE" "$CONFIG_FILE.bak"
             sed -i '' '/"companion":/,/}/d' "$CONFIG_FILE"
         fi
+        rm -f "$MOD_MARKER" 2>/dev/null
 
         echo -e "${GREEN}✓ 重新孵化完成${NC}"
     elif [[ "$action" == "2" ]]; then
@@ -114,31 +166,62 @@ if [[ ! -f "$BACKUP" ]]; then
     cp "$CLAUDE_BIN" "$BACKUP"
 fi
 
-if ! $QUIET; then echo "开始修改..."; fi
+# 验证备份是否有效
+if ! "$BACKUP" --version 2>&1 | grep -q "$CURRENT_VER"; then
+    echo -e "${RED}错误: 备份文件无效${NC}"
+    exit 1
+fi
+
+# 从备份恢复（确保干净起点）
+if ! $QUIET; then echo "从备份恢复..."; fi
+cp "$BACKUP" "$CLAUDE_BIN"
 
 # 移除签名
 codesign --remove-signature "$CLAUDE_BIN" 2>/dev/null || true
 
 # 1. 修改权重 - legendary 99%
-echo "  → 修改品质权重..."
+if ! $QUIET; then echo "  → 修改品质权重..."; fi
 WEIGHT_STR='common:00,uncommon:00,rare:00,epic:0,legendary:9'
+WEIGHT_COUNT=0
 for offset in $(grep -a -b -o "common:60,uncommon:25,rare:10,epic:4,legendary:1" "$CLAUDE_BIN" | cut -d: -f1); do
     printf '%s' "$WEIGHT_STR" | dd of="$CLAUDE_BIN" bs=1 seek=$offset conv=notrunc 2>/dev/null
+    WEIGHT_COUNT=$((WEIGHT_COUNT + 1))
 done
+
+if [[ $WEIGHT_COUNT -eq 0 ]]; then
+    echo -e "${RED}错误: 未找到权重定义${NC}"
+    cp "$BACKUP" "$CLAUDE_BIN"
+    codesign -s - "$CLAUDE_BIN" 2>/dev/null
+    exit 1
+fi
 
 # 2. 修改闪光概率 - 99%
-if ! $QUIET; then
-    echo "  → 闪光概率 99%"
-fi
+if ! $QUIET; then echo "  → 闪光概率 99%"; fi
+SHINY_COUNT=0
 for offset in $(grep -a -b -o "shiny:H()<0.01" "$CLAUDE_BIN" | cut -d: -f1); do
     printf '%s' "shiny:H()<0.99" | dd of="$CLAUDE_BIN" bs=1 seek=$offset conv=notrunc 2>/dev/null
+    SHINY_COUNT=$((SHINY_COUNT + 1))
 done
-
-# 3. 保留或更新种子
 
 # 清除属性并签名
 xattr -c "$CLAUDE_BIN" 2>/dev/null || true
 codesign -s - "$CLAUDE_BIN" 2>/dev/null
+
+# 验证二进制是否有效
+if ! "$CLAUDE_BIN" --version 2>&1 | grep -q "$CURRENT_VER"; then
+    echo -e "${RED}错误: 修改后二进制无效，恢复备份...${NC}"
+    cp "$BACKUP" "$CLAUDE_BIN"
+    codesign -s - "$CLAUDE_BIN" 2>/dev/null
+    exit 1
+fi
+
+# 验证修改是否成功
+if ! grep -q "legendary:9" "$CLAUDE_BIN" 2>/dev/null; then
+    echo -e "${RED}错误: 权重修改失败${NC}"
+    cp "$BACKUP" "$CLAUDE_BIN"
+    codesign -s - "$CLAUDE_BIN" 2>/dev/null
+    exit 1
+fi
 
 # 静默模式：不删除宠物配置（保留用户宠物）
 if ! $QUIET; then
@@ -153,7 +236,7 @@ if ! $QUIET; then
                 sed -i '' '/"companion":/,/}/d' "$CONFIG_FILE"
             fi
             # 清理修改标记文件
-            rm -f ~/.claude/.buddy-mod-applied 2>/dev/null
+            rm -f "$MOD_MARKER" 2>/dev/null
             echo -e "${GREEN}✓ 已删除旧配置${NC}"
         fi
     fi
@@ -162,7 +245,7 @@ fi
 # 记录版本
 echo "$CURRENT_VER" > "$MOD_MARKER"
 
-# 验证
+# 最终验证
 if "$CLAUDE_BIN" --version 2>&1 | grep -q "$CURRENT_VER"; then
     if $QUIET; then
         echo "✓ Buddy 修改完成"

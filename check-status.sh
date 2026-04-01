@@ -1,7 +1,8 @@
 #!/bin/bash
 # 查看宠物状态 + 版本检测
 
-CLAUDE_BIN="$HOME/.local/share/claude/versions/2.1.89"
+set -e
+
 CONFIG_FILE="$HOME/.claude.json"
 MOD_MARKER="$HOME/.claude/.buddy-mod-applied"
 VERSIONS_DIR="$HOME/.local/share/claude/versions"
@@ -11,6 +12,12 @@ YELLOW='\033[1;33m'
 RED='\033[0;31m'
 CYAN='\033[0;36m'
 NC='\033[0m'
+
+# 错误处理
+error_exit() {
+    echo -e "${RED}错误: $1${NC}" >&2
+    exit 1
+}
 
 echo -e "${CYAN}══════════════════════════════════════${NC}"
 echo -e "${CYAN}  Claude Code Buddy 状态检查        ${NC}"
@@ -52,6 +59,13 @@ if [[ -f "$CLAUDE_BIN" ]]; then
     # 种子
     SALT=$(grep -o "friend-2026-[0-9]*" "$CLAUDE_BIN" 2>/dev/null | head -1)
     echo "  随机种子: $SALT"
+
+    # 闪光状态
+    if grep -q "shiny:H()<0.99" "$CLAUDE_BIN" 2>/dev/null; then
+        echo -e "  闪光: ${GREEN}已启用 ✓${NC}"
+    else
+        echo -e "  闪光: ${YELLOW}未修改${NC}"
+    fi
 fi
 
 # 检查宠物配置
@@ -84,6 +98,17 @@ if [[ -f "$CONFIG_FILE" ]] && grep -q '"companion"' "$CONFIG_FILE"; then
         echo -e "${YELLOW}注意: 二进制已修改但 personality 未更新${NC}"
         echo "  species/stats 已变为传奇，但 personality 是旧文本"
         echo "  运行 ./make-legendary.sh 选择重新孵化"
+    fi
+
+    # 检查多次孵化痕迹
+    HATCH_COUNT=$(grep -c "birthdayHatAnimationCount" "$CONFIG_FILE" 2>/dev/null || echo "0")
+    if [[ "$HATCH_COUNT" -gt 0 ]]; then
+        ANIM_COUNT=$(grep -o '"birthdayHatAnimationCount":[0-9]*' "$CONFIG_FILE" 2>/dev/null | cut -d':' -f2)
+        if [[ -n "$ANIM_COUNT" && "$ANIM_COUNT" -gt 1 ]]; then
+            echo ""
+            echo -e "${YELLOW}注意: 检测到多次孵化痕迹 (birthdayHatAnimationCount: $ANIM_COUNT)${NC}"
+            echo "  建议运行 restore.sh 恢复原版后重新修改"
+        fi
     fi
 else
     echo -e "  ${YELLOW}未开启宠物${NC}"
